@@ -8,3 +8,11 @@ export const signInDefaultValues = {
   email: '',
   password: '',
 }
+
+// these are the default values for the sign up form --@Qamar
+export const signUpDefaultValues = {
+  name: '',
+  email: '',
+  password: '',
+  confirmPassword: '',
+}
