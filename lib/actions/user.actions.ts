@@ -7,12 +7,19 @@
 // else give the invalid email or password message ----@Qamar
 
 import { isRedirectError } from 'next/dist/client/components/redirect'
-import { signIn, signOut } from '@/auth'
-import { signInFormSchema, signUpFormSchema } from '../validator'
+import { auth, signIn, signOut } from '@/auth'
+import {
+  shippingAddressSchema,
+  signInFormSchema,
+  signUpFormSchema,
+} from '../validator'
 import { formatError } from '../utils'
 import { hashSync } from 'bcrypt-ts-edge'
 import db from '@/db/drizzle'
 import { users } from '@/db/schema'
+import { ShippingAddress } from '@/types'
+import { eq } from 'drizzle-orm'
+import { revalidatePath } from 'next/cache'
 
 // this is for the sign up form schema --@Qamar
 export async function signUp(prevState: unknown, formData: FormData) {
@@ -74,4 +81,38 @@ export async function signInWithCredentials(
 // here we are exporting the signOut function from the auth file --@Qamar
 export const SignOut = async () => {
   await signOut()
+}
+
+// return the user by the id --@Qamar
+// is a database query which is used for the shipping address part
+export async function getUserById(userId: string) {
+  const user = await db.query.users.findFirst({
+    where: (users, { eq }) => eq(users.id, userId),
+  })
+  if (!user) throw new Error('User not found')
+  return user
+}
+
+// this is an update query which sets the shi[ping address of the user --@Qamar
+// this field is null at first and is set which checking out
+export async function updateUserAddress(data: ShippingAddress) {
+  try {
+    const session = await auth()
+    const currentUser = await db.query.users.findFirst({
+      where: (users, { eq }) => eq(users.id, session?.user.id!),
+    })
+    if (!currentUser) throw new Error('User not found')
+
+    // this line is used to validate the shipping address(check if correct type) --@Qamar
+    const address = shippingAddressSchema.parse(data)
+
+    await db.update(users).set({ address }).where(eq(users.id, currentUser.id))
+    revalidatePath('/place-order')
+    return {
+      success: true,
+      message: 'User updated successfully',
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
 }

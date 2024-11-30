@@ -1,3 +1,10 @@
+// this is the validator section of the code. --@Qamar
+// we use it to define schema which are in typescript
+// ZOD is used to ensure that the data is of a valid type
+// Raw SQL cannot validate data input at runtime in your application hence we use zod to validate the data
+// zod is used to validate data at the application layer before it touches the database
+// in our case it is used to validate form inputs
+
 import * as z from 'zod'
 import { formatNumberWithDecimal } from './utils'
 // schema for signInForm --@Qamar
@@ -36,4 +43,15 @@ export const cartItemSchema = z.object({
       (value) => /^\d+(\.\d{2})?$/.test(formatNumberWithDecimal(value)),
       'Price must have exactly two decimal places (e.g., 49.99)'
     ),
+})
+
+// Shipping Address schema(use the zod z object) --@Qamar
+export const shippingAddressSchema = z.object({
+  fullName: z.string().min(3, 'Name must be at least 3 characters'),
+  streetAddress: z.string().min(3, 'Address must be at least 3 characters'),
+  city: z.string().min(3, 'city must be at least 3 characters'),
+  postalCode: z.string().min(3, 'Postal code must be at least 3 characters'),
+  country: z.string().min(3, 'Country must be at least 3 characters'),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
 })

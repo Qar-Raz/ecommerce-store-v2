@@ -16,19 +16,21 @@ const sampleData = {
     },
   ],
 
+  // define slugs in the form slug-in-lowercase-with-dashes
+
   products: [
     {
-      name: 'LOOSE FIT PIQUE JOGGER SWEATSHIRT',
-      slug: 'loose-fit-pique-jogger-sweatshirt',
-      category: "Men's Sweatshirts",
-      images: ['/assets/images/p1-1.jpeg', '/assets/images/p1-2.jpeg'],
-      price: '59.99',
+      name: 'Umar',
+      slug: 'umar-hussain-blue-shirt',
+      category: "Men's Shirt",
+      images: ['/assets/images/Umar.jpeg', '/assets/images/Umar.jpeg'],
+      price: '10',
       brand: 'Nike',
       rating: '4.5',
       numReviews: 10,
       stock: 5,
       description:
-        'Lacoste sporting elegance with an urban twist. Fall in love with this loose, cozy sweatshirt in super-comfortable double-face piqué.',
+        'Beautiful and comfortable loose fit blue shirt made with 100% cotton',
       isFeatured: true,
       banner: '/assets/images/banner-1.jpeg',
     },
@@ -75,4 +77,5 @@ const sampleData = {
     },
   ],
 }
+
 export default sampleData

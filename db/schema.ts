@@ -1,4 +1,9 @@
-import { CartItem } from '@/types'
+// drizzle orm allows us define queries and tables of postgres sql in typescript. --@Qamar
+// it is used in conjuction with Zod which handles data validation
+// this is advantageous because it allows type safety, that data types of the code matches the types of the database
+// IMP to note that Zod is not used to interact with the database, but drizzle is used to make tables and queries
+
+import { CartItem, ShippingAddress } from '@/types'
 import {
   boolean,
   integer,
@@ -22,6 +27,7 @@ export const users = pgTable('user', {
   password: text('password'),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
+  address: json('address').$type<ShippingAddress>(),
 })
 
 export const accounts = pgTable(

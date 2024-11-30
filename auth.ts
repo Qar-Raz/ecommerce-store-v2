@@ -52,6 +52,7 @@ export const config = {
       },
     }),
   ],
+  trustHost: true,
   callbacks: {
     jwt: async ({ token, user, trigger, session }: any) => {
       if (user) {
