@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  /* config options here */
+  env: {
+    NEXTAUTH_URL: 'http://localhost:3000', // Set the correct URL for local development
+  },
 }
 
 module.exports = nextConfig

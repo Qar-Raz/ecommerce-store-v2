@@ -1,6 +1,8 @@
+import { CartItem } from '@/types'
 import {
   boolean,
   integer,
+  json,
   numeric,
   pgTable,
   text,
@@ -93,3 +95,23 @@ export const products = pgTable(
     }
   }
 )
+
+// CARTS schema
+export const carts = pgTable('cart', {
+  id: uuid('id').notNull().defaultRandom().primaryKey(),
+  userId: uuid('userId').references(() => users.id, {
+    onDelete: 'cascade',
+  }),
+  sessionCartId: text('sessionCartId').notNull(),
+  //postgres allows for arrays of json objects --@Qamar
+  // we use the json type to store the cart items which is an array of all the items hence json is used here
+  items: json('items').$type<CartItem[]>().notNull().default([]),
+  itemsPrice: numeric('itemsPrice', { precision: 12, scale: 2 }).notNull(),
+  shippingPrice: numeric('shippingPrice', {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
+  taxPrice: numeric('taxPrice', { precision: 12, scale: 2 }).notNull(),
+  totalPrice: numeric('totalPrice', { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
