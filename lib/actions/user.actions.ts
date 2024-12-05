@@ -16,7 +16,7 @@ import {
 import { formatError } from '../utils'
 import { hashSync } from 'bcrypt-ts-edge'
 import db from '@/db/drizzle'
-import { users } from '@/db/schema'
+import { addresses, users } from '@/db/schema'
 import { ShippingAddress } from '@/types'
 import { eq } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
@@ -93,24 +93,44 @@ export async function getUserById(userId: string) {
   return user
 }
 
-// this is an update query which sets the shi[ping address of the user --@Qamar
+// this is an update query which sets the shipping address of the user --@Qamar
 // this field is null at first and is set which checking out
 export async function updateUserAddress(data: ShippingAddress) {
   try {
     const session = await auth()
+    if (!session?.user?.id) throw new Error('Not authenticated')
+
     const currentUser = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, session?.user.id!),
+      where: (users, { eq }) => eq(users.id, session.user.id as string),
     })
     if (!currentUser) throw new Error('User not found')
 
-    // this line is used to validate the shipping address(check if correct type) --@Qamar
+    // Validate the shipping address
     const address = shippingAddressSchema.parse(data)
 
-    await db.update(users).set({ address }).where(eq(users.id, currentUser.id))
+    // Check if user already has an address
+    const existingAddress = await db.query.addresses.findFirst({
+      where: (addresses, { eq }) => eq(addresses.userId, currentUser.id),
+    })
+
+    if (existingAddress) {
+      // Update existing address
+      await db
+        .update(addresses)
+        .set({ address })
+        .where(eq(addresses.userId, currentUser.id))
+    } else {
+      // Create new address record
+      await db.insert(addresses).values({
+        userId: currentUser.id,
+        address,
+      })
+    }
+
     revalidatePath('/place-order')
     return {
       success: true,
-      message: 'User updated successfully',
+      message: 'Address updated successfully',
     }
   } catch (error) {
     return { success: false, message: formatError(error) }

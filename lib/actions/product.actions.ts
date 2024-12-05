@@ -6,10 +6,26 @@ import db from '@/db/drizzle'
 import { products } from '@/db/schema'
 import { eq } from 'drizzle-orm/sql'
 
+import { sql } from 'drizzle-orm'
+
 export async function getLatestProducts() {
+  const query = sql`SELECT * FROM product;`
+  const data = await db.execute(query)
+  return data.rows
+}
+
+export async function getExpensiveProducts() {
   const data = await db.query.products.findMany({
-    orderBy: [desc(products.createdAt)],
-    limit: 4,
+    orderBy: [desc(products.price)], // Sorting by price in descending order
+    limit: 4, // Limiting the result to 4 products
+  })
+  return data
+}
+
+export async function getHighlyRatedProducts() {
+  const data = await db.query.products.findMany({
+    orderBy: [desc(products.rating)], // Sorting by price in descending order
+    limit: 4, // Limiting the result to 4 products
   })
   return data
 }
