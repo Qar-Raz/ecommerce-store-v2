@@ -27,6 +27,7 @@ export const users = pgTable('user', {
   password: text('password'),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
+  paymentMethod: text('paymentMethod'),
 })
 
 // ADDRESS

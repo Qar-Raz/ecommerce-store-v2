@@ -1,13 +1,68 @@
-// this is the home page of the app
+import {
+  getLatestProducts,
+  getExpensiveProducts,
+  getHighlyRatedProducts,
+} from '@/lib/actions/product.actions'
 
-import ProductList from '@/components/shared/product/product-list'
-import { getLatestProducts } from '@/lib/actions/product.actions'
+import ProductDisplay from '@/components/shared/product/ProductDisplay'
+
 export default async function Home() {
-  const latestProducts = await getLatestProducts()
+  const latestProducts = (await getLatestProducts()) as {
+    id: string
+    brand: string
+    name: string
+    slug: string
+    category: string
+    images: string[]
+    description: string
+    stock: number
+    price: string
+    rating: string
+    numReviews: number
+    isFeatured: boolean
+    banner: string | null
+    createdAt: Date
+  }[]
+
+  const expensiveProducts = (await getExpensiveProducts()) as {
+    id: string
+    brand: string
+    name: string
+    slug: string
+    category: string
+    images: string[]
+    description: string
+    stock: number
+    price: string
+    rating: string
+    numReviews: number
+    isFeatured: boolean
+    banner: string | null
+    createdAt: Date
+  }[]
+
+  const highlyRatedProducts = (await getHighlyRatedProducts()) as {
+    id: string
+    brand: string
+    name: string
+    slug: string
+    category: string
+    images: string[]
+    description: string
+    stock: number
+    price: string
+    rating: string
+    numReviews: number
+    isFeatured: boolean
+    banner: string | null
+    createdAt: Date
+  }[]
 
   return (
-    <div className="space-y-8">
-      <ProductList title="Products" data={latestProducts} />
-    </div>
+    <ProductDisplay
+      latestProducts={latestProducts}
+      expensiveProducts={expensiveProducts}
+      highlyRatedProducts={highlyRatedProducts}
+    />
   )
 }

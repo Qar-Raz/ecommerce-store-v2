@@ -9,6 +9,7 @@
 import { isRedirectError } from 'next/dist/client/components/redirect'
 import { auth, signIn, signOut } from '@/auth'
 import {
+  paymentMethodSchema,
   shippingAddressSchema,
   signInFormSchema,
   signUpFormSchema,
@@ -18,8 +19,9 @@ import { hashSync } from 'bcrypt-ts-edge'
 import db from '@/db/drizzle'
 import { addresses, users } from '@/db/schema'
 import { ShippingAddress } from '@/types'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
+import { z } from 'zod'
 
 // this is for the sign up form schema --@Qamar
 export async function signUp(prevState: unknown, formData: FormData) {
@@ -131,6 +133,36 @@ export async function updateUserAddress(data: ShippingAddress) {
     return {
       success: true,
       message: 'Address updated successfully',
+    }
+  } catch (error) {
+    return { success: false, message: formatError(error) }
+  }
+}
+
+//has been converted to use raw sql query --@Qamar
+export async function updateUserPaymentMethod(
+  data: z.infer<typeof paymentMethodSchema>
+) {
+  try {
+    // first line is to access the session
+    const session = await auth()
+    //get the current user
+
+    const currentUserResult = await db.execute(
+      sql`SELECT * FROM "user" WHERE id = ${session?.user.id!} LIMIT 1`
+    )
+    const currentUser = currentUserResult.rows[0]
+
+    if (!currentUser) throw new Error('User not found')
+    const paymentMethod = paymentMethodSchema.parse(data)
+
+    await db.execute(
+      sql`UPDATE "user" SET "paymentMethod" = ${paymentMethod.type} WHERE id = ${currentUser.id}`
+    )
+
+    return {
+      success: true,
+      message: 'User updated successfully',
     }
   } catch (error) {
     return { success: false, message: formatError(error) }

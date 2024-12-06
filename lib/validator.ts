@@ -7,6 +7,8 @@
 
 import * as z from 'zod'
 import { formatNumberWithDecimal } from './utils'
+import { DEFAULT_PAYMENT_METHOD } from './constants'
+
 // schema for signInForm --@Qamar
 export const signInFormSchema = z.object({
   email: z.string().email().min(3, 'Email must be at least 3 characters'),
@@ -55,3 +57,13 @@ export const shippingAddressSchema = z.object({
   lat: z.number().optional(),
   lng: z.number().optional(),
 })
+
+// Schema for Payment Method --@Qamar
+export const paymentMethodSchema = z
+  .object({
+    type: z.string().min(1, 'Payment method is required'),
+  })
+  .refine((data) => DEFAULT_PAYMENT_METHOD.includes(data.type), {
+    path: ['type'],
+    message: 'Invalid payment method',
+  })

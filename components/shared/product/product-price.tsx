@@ -12,10 +12,12 @@ const ProductPrice = ({
     : [stringValue, '']
   return (
     <p className={cn('text-2xl', className)}>
-      <span className="text-xs align-super">$</span>
+      <span className="text-xs align-super">Rs </span>
       {intValue}
       <span className="text-xs align-super">{floatValue}</span>
     </p>
   )
 }
 export default ProductPrice
+
+// have specified the type of currency in this file as Rs

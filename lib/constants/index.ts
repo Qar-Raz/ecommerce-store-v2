@@ -3,6 +3,10 @@ export const APP_DESCRIPTION =
   process.env.NEXT_PUBLIC_APP_DESCRIPTION ||
   'Ecommerce Website Made For Databases Project'
 
+// default payment methods --@Qamar
+export const DEFAULT_PAYMENT_METHOD =
+  process.env.DEFAULT_PAYMENT_METHOD || 'CashOnDelivery'
+
 // this is to set the default password for the website --@Qamar
 export const signInDefaultValues = {
   email: '',

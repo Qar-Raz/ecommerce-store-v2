@@ -11,6 +11,7 @@ export const metadata: Metadata = {
 export default async function ShippingPage() {
   const cart = await getMyCart()
   if (!cart || cart.items.length === 0) redirect('/cart')
+
   const session = await auth()
   const user = await getUserById(session?.user.id!)
   return <ShippingAddressForm address={user.address} />
