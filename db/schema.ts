@@ -27,6 +27,13 @@ export const users = pgTable('user', {
   password: text('password'),
   emailVerified: timestamp('emailVerified', { mode: 'date' }),
   image: text('image'),
+})
+
+// ADDRESS
+export const addresses = pgTable('address', {
+  userId: uuid('user_id')
+    .references(() => users.id)
+    .primaryKey(),
   address: json('address').$type<ShippingAddress>(),
 })
 
@@ -54,6 +61,7 @@ export const accounts = pgTable(
   })
 )
 
+// sessions and verification tokens tables are not created by me but by next-auth --@Qamar
 export const sessions = pgTable('session', {
   sessionToken: text('sessionToken').primaryKey(),
   userId: uuid('userId')
