@@ -3,7 +3,7 @@
 // this is advantageous because it allows type safety, that data types of the code matches the types of the database
 // IMP to note that Zod is not used to interact with the database, but drizzle is used to make tables and queries
 
-import { CartItem, ShippingAddress } from '@/types'
+import { CartItem, PaymentResult, ShippingAddress } from '@/types'
 import {
   boolean,
   integer,
@@ -16,6 +16,7 @@ import {
   uuid,
 } from 'drizzle-orm/pg-core'
 import { primaryKey } from 'drizzle-orm/pg-core/primary-keys'
+import { relations } from 'drizzle-orm/relations'
 import { AdapterAccountType } from 'next-auth/adapters'
 
 // USERS
@@ -131,3 +132,68 @@ export const carts = pgTable('cart', {
   totalPrice: numeric('totalPrice', { precision: 12, scale: 2 }).notNull(),
   createdAt: timestamp('createdAt').notNull().defaultNow(),
 })
+
+// orders schema
+export const orders = pgTable('order', {
+  id: uuid('id').defaultRandom().primaryKey(),
+  userId: uuid('userId')
+    .notNull()
+    .references(() => users.id, { onDelete: 'cascade' }),
+  shippingAddress: json('shippingAddress').$type<ShippingAddress>().notNull(),
+  paymentMethod: text('paymentMethod').notNull(),
+  paymentResult: json('paymentResult').$type<PaymentResult>(),
+  itemsPrice: numeric('itemsPrice', { precision: 12, scale: 2 }).notNull(),
+  shippingPrice: numeric('shippingPrice', {
+    precision: 12,
+    scale: 2,
+  }).notNull(),
+  taxPrice: numeric('taxPrice', { precision: 12, scale: 2 }).notNull(),
+  totalPrice: numeric('totalPrice', { precision: 12, scale: 2 }).notNull(),
+  isPaid: boolean('isPaid').notNull().default(false),
+  paidAt: timestamp('paidAt'),
+  isDelivered: boolean('isDelivered').notNull().default(false),
+  deliveredAt: timestamp('deliveredAt'),
+  createdAt: timestamp('createdAt').notNull().defaultNow(),
+})
+
+// here 2 relations are defined
+// 1 order may have many order items
+// each order has one user
+export const ordersRelations = relations(orders, ({ one, many }) => ({
+  orderItems: many(orderItems),
+  user: one(users, { fields: [orders.userId], references: [users.id] }),
+}))
+
+// orderId is a foreign key that references the id of the order table
+// productId is a foreign key that references the id of the product table
+export const orderItems = pgTable(
+  'orderItems',
+  {
+    orderId: uuid('orderId')
+      .notNull()
+      .references(() => orders.id, { onDelete: 'cascade' }),
+    productId: uuid('productId')
+      .notNull()
+      .references(() => products.id, { onDelete: 'cascade' }),
+    qty: integer('qty').notNull(),
+    price: numeric('price', { precision: 12, scale: 2 }).notNull(),
+    name: text('name').notNull(),
+    slug: text('slug').notNull(),
+    image: text('image').notNull(),
+  },
+  // primary key compound key is defined here is a combination of orderId and productId
+  (orderItem) => ({
+    compoundKey: primaryKey({
+      columns: [orderItem.orderId, orderItem.productId],
+    }),
+  })
+)
+
+// here 1 relation is defined
+// each order item has one orderId
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+}))
