@@ -14,5 +14,6 @@ export default async function ShippingPage() {
 
   const session = await auth()
   const user = await getUserById(session?.user.id!)
+
   return <ShippingAddressForm address={user.address} />
 }

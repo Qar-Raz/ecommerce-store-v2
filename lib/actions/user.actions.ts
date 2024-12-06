@@ -121,12 +121,24 @@ export async function updateUserAddress(data: ShippingAddress) {
         .update(addresses)
         .set({ address })
         .where(eq(addresses.userId, currentUser.id))
+
+      // update the user address in the user table --@Qamar
+      await db
+        .update(users)
+        .set({ address })
+        .where(eq(users.id, currentUser.id))
     } else {
       // Create new address record
       await db.insert(addresses).values({
         userId: currentUser.id,
         address,
       })
+
+      // update the user address in the user table --@Qamar
+      await db
+        .update(users)
+        .set({ address })
+        .where(eq(users.id, currentUser.id))
     }
 
     revalidatePath('/place-order')

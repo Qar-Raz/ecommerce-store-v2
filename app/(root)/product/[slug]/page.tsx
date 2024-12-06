@@ -32,7 +32,25 @@ const ProductDetails = async ({
   params: { slug: string }
   searchParams: { page: string; color: string; size: string }
 }) => {
-  const product = await getProductBySlug(slug)
+  // need to type cast the product returned by the getProductBySlug function as it is a raw sql query
+  // defined in the user actions file
+  const product = (await getProductBySlug(slug)) as {
+    id: string
+    brand: string
+    name: string
+    slug: string
+    category: string
+    images: string[]
+    description: string
+    stock: number
+    price: string
+    rating: string
+    numReviews: number
+    isFeatured: boolean
+    banner: string | null
+    createdAt: Date
+  }
+
   if (!product) notFound()
 
   const cart = await getMyCart()
