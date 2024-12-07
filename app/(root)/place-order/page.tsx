@@ -18,16 +18,29 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PlaceOrderForm from './place-order-form'
+import { ShippingAddress } from '@/types'
 export const metadata = {
   title: `Place Order - ${APP_NAME}`,
 }
 export default async function PlaceOrderPage() {
   const cart = await getMyCart()
   const session = await auth()
-  const user = await getUserById(session?.user.id!)
+  const user = (await getUserById(session?.user.id!)) as {
+    id: string
+    name: string | null
+    email: string
+    role: string
+    password: string | null
+    emailVerified: Date | null
+    image: string | null
+    address: ShippingAddress | null
+    paymentMethod: string | null
+  }
+
   if (!cart || cart.items.length === 0) redirect('/cart')
   if (!user.address) redirect('/shipping-address')
   if (!user.paymentMethod) redirect('/payment-method')
+
   return (
     <>
       <CheckoutSteps current={3} />

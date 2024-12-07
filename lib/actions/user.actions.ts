@@ -17,9 +17,8 @@ import {
 import { formatError } from '../utils'
 import { hashSync } from 'bcrypt-ts-edge'
 import db from '@/db/drizzle'
-import { addresses, users } from '@/db/schema'
 import { ShippingAddress } from '@/types'
-import { eq, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { revalidatePath } from 'next/cache'
 import { z } from 'zod'
 
@@ -32,30 +31,47 @@ export async function signUp(prevState: unknown, formData: FormData) {
       confirmPassword: formData.get('confirmPassword'),
       password: formData.get('password'),
     })
+
     const values = {
       id: crypto.randomUUID(),
       ...user,
-      // we hash the password before storing it in the database(just extra security) --@Qamar
+      // Hash the password before storing it in the database
       password: hashSync(user.password, 10),
     }
-    await db.insert(users).values(values)
+
+    // Insert the new user using raw SQL
+    await db.execute(
+      sql`
+        INSERT INTO "user" (
+          id, name, email, password
+        ) VALUES (
+          ${values.id},
+          ${values.name},
+          ${values.email},
+          ${values.password}
+        )
+      `
+    )
+
+    // Sign in the user after successful signup
     await signIn('credentials', {
       email: user.email,
       password: user.password,
     })
+
     return { success: true, message: 'User created successfully' }
   } catch (error) {
     if (isRedirectError(error)) {
       throw error
     }
 
-    //this block of code checks if the email is already in the database --@Qamar
+    // Check if the email is already in the database
     return {
       success: false,
       message: formatError(error).includes(
         'duplicate key value violates unique constraint "user_email_idx"'
       )
-        ? 'Email is already exist'
+        ? 'Email already exists'
         : formatError(error),
     }
   }
@@ -85,12 +101,54 @@ export const SignOut = async () => {
   await signOut()
 }
 
+// this is a function to delete the user
+//is called when the profile button is clicked and the delete user dropdown is selected --@Qamar
+export async function deleteUser() {
+  const session = await auth()
+  if (!session?.user?.id) throw new Error('Not authenticated')
+
+  // Fetch the current user using raw SQL
+  const currentUserResult = await db.execute(
+    sql`
+    SELECT * 
+    FROM "user" 
+    WHERE id = ${session.user.id}`
+  )
+  const currentUser = currentUserResult.rows[0]
+  if (!currentUser) throw new Error('User not found')
+
+  const userId = currentUser.id
+  console.log('Current User ID:', userId) // Log the user ID
+
+  // we dont need to delete foreign key reference for the other tables as the database
+  // is set to cascade on delete while defining schema --@Qamar
+  await db.execute(
+    sql`
+    DELETE FROM "user" 
+    WHERE id = ${userId}`
+  )
+
+  // Sign out the current user
+  await signOut()
+
+  // Delete the current user from the database using the userId
+}
+
 // return the user by the id --@Qamar
 // is a database query which is used for the shipping address part
+
 export async function getUserById(userId: string) {
-  const user = await db.query.users.findFirst({
-    where: (users, { eq }) => eq(users.id, userId),
-  })
+  // Fetch the user using a raw SQL query
+  const userResult = await db.execute(
+    sql`
+    SELECT * 
+    FROM "user" 
+    WHERE id = ${userId}`
+  )
+
+  // Access the first row from the result
+  const user = userResult.rows[0]
+
   if (!user) throw new Error('User not found')
   return user
 }
@@ -102,44 +160,41 @@ export async function updateUserAddress(data: ShippingAddress) {
     const session = await auth()
     if (!session?.user?.id) throw new Error('Not authenticated')
 
-    const currentUser = await db.query.users.findFirst({
-      where: (users, { eq }) => eq(users.id, session.user.id as string),
-    })
+    // Fetch the current user using raw SQL
+    const currentUserResult = await db.execute(
+      sql`
+      SELECT * 
+      FROM "user" 
+      WHERE id = ${session.user.id}`
+    )
+    const currentUser = currentUserResult.rows[0]
+    // error handling if the user is not found
     if (!currentUser) throw new Error('User not found')
 
     // Validate the shipping address
     const address = shippingAddressSchema.parse(data)
 
-    // Check if user already has an address
-    const existingAddress = await db.query.addresses.findFirst({
-      where: (addresses, { eq }) => eq(addresses.userId, currentUser.id),
-    })
+    // Serialize the address object to JSON string
+    const addressJson = JSON.stringify(address)
 
-    if (existingAddress) {
-      // Update existing address
-      await db
-        .update(addresses)
-        .set({ address })
-        .where(eq(addresses.userId, currentUser.id))
+    // Upsert the address in the addresses table
+    await db.execute(
+      sql`
+        INSERT INTO address (user_id, address)
+        VALUES (${currentUser.id}, ${addressJson}::jsonb)
+        ON CONFLICT (user_id)
+        DO UPDATE SET address = EXCLUDED.address
+      `
+    )
 
-      // update the user address in the user table --@Qamar
-      await db
-        .update(users)
-        .set({ address })
-        .where(eq(users.id, currentUser.id))
-    } else {
-      // Create new address record
-      await db.insert(addresses).values({
-        userId: currentUser.id,
-        address,
-      })
-
-      // update the user address in the user table --@Qamar
-      await db
-        .update(users)
-        .set({ address })
-        .where(eq(users.id, currentUser.id))
-    }
+    // Update the user's address in the users table
+    await db.execute(
+      sql`
+        UPDATE "user"
+        SET address = ${addressJson}::jsonb
+        WHERE id = ${currentUser.id}
+      `
+    )
 
     revalidatePath('/place-order')
     return {
@@ -161,7 +216,11 @@ export async function updateUserPaymentMethod(
     //get the current user
 
     const currentUserResult = await db.execute(
-      sql`SELECT * FROM "user" WHERE id = ${session?.user.id!} LIMIT 1`
+      sql`
+      SELECT * 
+      FROM "user"
+       WHERE id = ${session?.user.id!}
+        LIMIT 1`
     )
     const currentUser = currentUserResult.rows[0]
 
@@ -169,7 +228,10 @@ export async function updateUserPaymentMethod(
     const paymentMethod = paymentMethodSchema.parse(data)
 
     await db.execute(
-      sql`UPDATE "user" SET "paymentMethod" = ${paymentMethod.type} WHERE id = ${currentUser.id}`
+      sql`
+      UPDATE "user"
+       SET "paymentMethod" = ${paymentMethod.type}
+        WHERE id = ${currentUser.id}`
     )
 
     return {

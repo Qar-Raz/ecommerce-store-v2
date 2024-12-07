@@ -7,7 +7,7 @@ import { redirect } from 'next/navigation'
 import { insertOrderSchema } from '../validator'
 import db from '@/db/drizzle'
 import { carts, orderItems, orders } from '@/db/schema'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { isRedirectError } from 'next/dist/client/components/redirect'
 import { formatError } from '../utils'
 
@@ -62,11 +62,59 @@ export const createOrder = async () => {
 }
 
 export async function getOrderById(orderId: string) {
-  return await db.query.orders.findFirst({
-    where: eq(orders.id, orderId),
-    with: {
-      orderItems: true,
-      user: { columns: { name: true, email: true } },
+  // Fetch the order using raw SQL
+  const orderResult = await db.execute(
+    sql`
+      SELECT 
+        o.*, 
+        u.name as "userName", 
+        u.email as "userEmail",
+        coalesce(
+          json_agg(
+            json_build_object(
+              'orderId', oi."orderId",
+              'productId', oi."productId",
+              'qty', oi.qty,
+              'price', oi.price,
+              'name', oi.name,
+              'slug', oi.slug,
+              'image', oi.image
+            )
+          ) FILTER (WHERE oi."orderId" IS NOT NULL), '[]'
+        ) as "orderItems"
+      FROM "order" o
+      JOIN "user" u ON o."userId" = u.id
+      LEFT JOIN "orderItems" oi ON o.id = oi."orderId"
+      WHERE o.id = ${orderId}
+      GROUP BY o.id, u.name, u.email;
+    `
+  )
+
+  const orderRow = orderResult.rows[0]
+  if (!orderRow) throw new Error('Order not found')
+
+  // Construct the order object
+  const order = {
+    id: orderRow.id,
+    userId: orderRow.userId,
+    shippingAddress: orderRow.shippingAddress,
+    paymentMethod: orderRow.paymentMethod,
+    paymentResult: orderRow.paymentResult,
+    itemsPrice: orderRow.itemsPrice,
+    shippingPrice: orderRow.shippingPrice,
+    taxPrice: orderRow.taxPrice,
+    totalPrice: orderRow.totalPrice,
+    isPaid: orderRow.isPaid,
+    paidAt: orderRow.paidAt,
+    isDelivered: orderRow.isDelivered,
+    deliveredAt: orderRow.deliveredAt,
+    createdAt: orderRow.createdAt,
+    user: {
+      name: orderRow.userName,
+      email: orderRow.userEmail,
     },
-  })
+    orderItems: orderRow.orderItems,
+  }
+
+  return order
 }

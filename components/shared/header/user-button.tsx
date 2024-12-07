@@ -1,9 +1,6 @@
 import Link from 'next/link'
 import { auth } from '@/auth'
 import { Button } from '@/components/ui/button'
-
-//this file creates the user profile button that will be displayed in the header
-
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -12,6 +9,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import { SignOut } from '@/lib/actions/user.actions'
+// Import the deleteUser function (ensure to implement it later)
+import { deleteUser } from '@/lib/actions/user.actions'
+
 export default async function UserButton() {
   const session = await auth()
   if (!session)
@@ -51,6 +51,16 @@ export default async function UserButton() {
                 variant="ghost"
               >
                 Sign Out
+              </Button>
+            </form>
+          </DropdownMenuItem>
+          <DropdownMenuItem className="p-0">
+            <form action={deleteUser} className="w-full">
+              <Button
+                className="w-full py-4 px-2 h-4 justify-start text-red-600"
+                variant="ghost"
+              >
+                Delete User
               </Button>
             </form>
           </DropdownMenuItem>

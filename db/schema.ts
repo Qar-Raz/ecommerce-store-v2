@@ -35,7 +35,7 @@ export const users = pgTable('user', {
 // ADDRESS
 export const addresses = pgTable('address', {
   userId: uuid('user_id')
-    .references(() => users.id)
+    .references(() => users.id, { onDelete: 'cascade' })
     .primaryKey(),
   address: json('address').$type<ShippingAddress>(),
 })
