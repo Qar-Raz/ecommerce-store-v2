@@ -10,6 +10,7 @@ import { APP_NAME } from '@/lib/constants'
 import AddToCart from '@/components/shared/product/add-to-cart'
 import { getMyCart } from '@/lib/actions/cart.actions'
 import { round2 } from '@/lib/utils'
+import { Cart } from '@/types'
 
 export async function generateMetadata({
   params,
@@ -53,7 +54,7 @@ const ProductDetails = async ({
 
   if (!product) notFound()
 
-  const cart = await getMyCart()
+  const cart = (await getMyCart()) as Cart
 
   return (
     <>

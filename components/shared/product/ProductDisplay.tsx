@@ -38,8 +38,14 @@ export default function ProductDisplay({
 
   return (
     <div className="space-y-8">
-      {/* Dropdown Menu */}
-      <DropdownMenuClient onSelect={handleSelection} />
+      {/* Header Section */}
+      <div className="flex items-center justify-between">
+        {/* Title */}
+        <h1 className="text-2xl font-bold">{title}</h1>
+
+        {/* Dropdown Menu */}
+        <DropdownMenuClient onSelect={handleSelection} />
+      </div>
 
       {/* Product List */}
       <ProductList title={title} data={selectedProducts} />

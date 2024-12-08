@@ -18,7 +18,7 @@ export default function DropdownMenuClient({
     <div className="flex justify-end">
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
-          <Button variant="outline">Filter Options</Button>
+          <Button variant="outline">Sort By</Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent>
           <DropdownMenuItem onClick={() => onSelect('latest')}>

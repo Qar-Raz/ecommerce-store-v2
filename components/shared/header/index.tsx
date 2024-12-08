@@ -17,7 +17,7 @@ const Header = async () => {
         <div className="flex-start">
           <Link href="/" className="flex-start">
             <Image
-              src="/assets/icons/logo.svg"
+              src="/assets/icons/logo2.png"
               // this controls the size of the logo
               width={48}
               height={48}

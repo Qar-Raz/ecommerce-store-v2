@@ -18,12 +18,12 @@ import Image from 'next/image'
 import Link from 'next/link'
 import { redirect } from 'next/navigation'
 import PlaceOrderForm from './place-order-form'
-import { ShippingAddress } from '@/types'
+import { Cart, ShippingAddress } from '@/types'
 export const metadata = {
   title: `Place Order - ${APP_NAME}`,
 }
 export default async function PlaceOrderPage() {
-  const cart = await getMyCart()
+  const cart = (await getMyCart()) as Cart
   const session = await auth()
   const user = (await getUserById(session?.user.id!)) as {
     id: string

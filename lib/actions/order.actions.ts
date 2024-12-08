@@ -2,25 +2,36 @@
 
 import { auth } from '@/auth'
 import { getMyCart } from './cart.actions'
-import { getUserById } from './user.actions'
 import { redirect } from 'next/navigation'
 import { insertOrderSchema } from '../validator'
 import db from '@/db/drizzle'
-import { carts, orderItems, orders } from '@/db/schema'
-import { eq, sql } from 'drizzle-orm'
+import { sql } from 'drizzle-orm'
 import { isRedirectError } from 'next/dist/client/components/redirect'
 import { formatError } from '../utils'
+import { Cart } from '@/types'
 
-// CREATE
+// CREATE the order
 export const createOrder = async () => {
   try {
     const session = await auth()
     if (!session) throw new Error('User is not authenticated')
-    const cart = await getMyCart()
-    const user = await getUserById(session?.user.id!)
+
+    const cart = (await getMyCart()) as Cart
+
+    // Get user using raw SQL
+    const userQuery = sql`
+      SELECT * FROM "user"
+      WHERE "id" = ${session.user.id}
+      LIMIT 1
+    `
+    const userResult = await db.execute(userQuery)
+    const user = userResult.rows[0]
+
+    if (!user) throw new Error('User not found')
     if (!cart || cart.items.length === 0) redirect('/cart')
     if (!user.address) redirect('/shipping-address')
     if (!user.paymentMethod) redirect('/payment-method')
+
     const order = insertOrderSchema.parse({
       userId: user.id,
       shippingAddress: user.address,
@@ -30,27 +41,82 @@ export const createOrder = async () => {
       taxPrice: cart.taxPrice,
       totalPrice: cart.totalPrice,
     })
+
+    // Start transaction
     const insertedOrderId = await db.transaction(async (tx) => {
-      const insertedOrder = await tx.insert(orders).values(order).returning()
+      // Insert order
+      const insertOrderQuery = sql`
+        INSERT INTO "order" (
+          "userId",
+          "shippingAddress",
+          "paymentMethod",
+          "itemsPrice",
+          "shippingPrice",
+          "taxPrice",
+          "totalPrice",
+          "isPaid",
+          "isDelivered",
+          "createdAt"
+        )
+        VALUES (
+          ${order.userId},
+          ${JSON.stringify(order.shippingAddress)},
+          ${order.paymentMethod},
+          ${order.itemsPrice},
+          ${order.shippingPrice},
+          ${order.taxPrice},
+          ${order.totalPrice},
+          FALSE,
+          FALSE,
+          NOW()
+        )
+        RETURNING "id"
+      `
+
+      const orderResult = await tx.execute(insertOrderQuery)
+      const insertedOrder = orderResult.rows[0]
+
+      // Insert order items
       for (const item of cart.items) {
-        await tx.insert(orderItems).values({
-          ...item,
-          price: item.price.toFixed(2),
-          orderId: insertedOrder[0].id,
-        })
+        const insertOrderItemQuery = sql`
+          INSERT INTO "orderItems" (
+            "orderId",
+            "productId",
+            "qty",
+            "price",
+            "name",
+            "slug",
+            "image"
+          )
+          VALUES (
+            ${insertedOrder.id},
+            ${item.productId},
+            ${item.qty},
+            ${item.price.toFixed(2)},
+            ${item.name},
+            ${item.slug},
+            ${item.image}
+          )
+        `
+        await tx.execute(insertOrderItemQuery)
       }
-      await db
-        .update(carts)
-        .set({
-          items: [],
-          totalPrice: '0',
-          shippingPrice: '0',
-          taxPrice: '0',
-          itemsPrice: '0',
-        })
-        .where(eq(carts.id, cart.id))
-      return insertedOrder[0].id
+
+      // Clear cart
+      const updateCartQuery = sql`
+        UPDATE "cart"
+        SET 
+          "items" = '[]'::json,
+          "totalPrice" = '0',
+          "shippingPrice" = '0',
+          "taxPrice" = '0',
+          "itemsPrice" = '0'
+        WHERE "id" = ${cart.id}
+      `
+      await tx.execute(updateCartQuery)
+
+      return insertedOrder.id
     })
+
     if (!insertedOrderId) throw new Error('Order not created')
     redirect(`/order/${insertedOrderId}`)
   } catch (error) {
