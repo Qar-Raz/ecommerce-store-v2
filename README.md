@@ -3,7 +3,7 @@ Project = Ecommerce Website
 
 The Website has been deployed on this link:
 
-https://qamar-database-project-ouitrcarw-qar-razs-projects.vercel.app/order/cdfaa4b5-f65d-4022-a6d5-8f7db25c29d3
+qamar-database-project-ff311vkee-qar-razs-projects.vercel.app
 
 To run the code on local host
 1)npm install
